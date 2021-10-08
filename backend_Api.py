@@ -25,19 +25,55 @@ def fetch(tag_str):
     return temp
 
 
+def sort_list(data: list, desc=None, parameter='id'):
+    data = sorted(data, key=lambda field: field[parameter])
+    if desc == 'desc':
+        return data[::-1]
+    return data
+
+
 @app.route("/api/")
 def index():
-    return render_template('index.html')
+    return render_template('index.html'), 200
 
 
 @app.route("/api/posts/", methods=['GET'])
 def api_response():
     tags = request.args.get('tags')
-    """return '''<h1>The source value is: {}</h1>'''.format(tag)"""
+    sortBy = request.args.get('sortBy')
+    direction = request.args.get('direction')
+
     if tags:
         data = fetch(tags)
-        res = {'posts': data}
-        return jsonify(res), 200
+        if not sortBy:
+            if direction and direction == "desc" or direction == "asc":
+                data = sort_list(data, desc=direction)
+                res = {'posts': data}
+                return jsonify(res), 200
+            elif not direction:
+                data = sort_list(data)
+                res = {'posts': data}
+                return jsonify(res), 200
+            else:
+                error = {"error": "direction parameter is invalid"}
+                return jsonify(error), 400
+
+        elif sortBy and sortBy == 'reads' or sortBy == 'likes' or sortBy == 'popularity' or sortBy == 'id':
+            if direction and direction == "desc" or direction == "asc":
+                data = sort_list(data, desc=direction, parameter=sortBy)
+                res = {'posts': data}
+                return jsonify(res), 200
+            elif not direction:
+                data = sort_list(data, parameter=sortBy)
+                res = {'posts': data}
+                return jsonify(res), 200
+            else:
+                error = {"error": "direction parameter is invalid"}
+                return jsonify(error), 400
+        else:
+            error = {"error": "sortBy parameter is invalid"}
+            return jsonify(error), 400
+
     else:
         error = {"error": "Tags parameter is required"}
         return jsonify(error), 400
